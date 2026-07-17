@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: event_app
+      POSTGRES_PASSWORD: event_app
+      POSTGRES_DB: event_app_dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
