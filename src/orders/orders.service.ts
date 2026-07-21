@@ -13,7 +13,7 @@ import { Category } from '../categories/category.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { In } from 'typeorm';
 import { EntryStatus } from '../entries/entry.entity';
-import { EmailService } from 'src/email/email.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class OrdersService {
@@ -36,8 +36,6 @@ export class OrdersService {
     const total = categories.length * PRICE_PER_ENTRY;
 
     return this.dataSource.transaction(async (manager) => {
-      // Lock each requested category row so no other transaction can read/write it
-      // until this one commits — this is what prevents overselling.
       for (const category of categories) {
         const locked = await manager.findOne(Category, {
           where: { id: category.id },
