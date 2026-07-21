@@ -6,6 +6,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
+import { EmailService } from '../email/email.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -14,6 +15,7 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private emailService: EmailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -27,6 +29,8 @@ export class AuthService {
       firstName: dto.firstName,
       lastName: dto.lastName,
     });
+
+    await this.emailService.queueWelcomeEmail(user.email, user.firstName);
 
     return this.buildToken(user.id, user.email, user.role);
   }
