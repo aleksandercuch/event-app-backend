@@ -17,6 +17,7 @@ import { CreateCategoryDto } from '../categories/dto/create-category.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/decorators/roles.guard';
 import { UserRole } from '../users/user.entity';
+import { UpdateCategoryDto } from 'src/categories/dto/update-category.dto';
 
 @Controller('tournaments')
 export class TournamentsController {
@@ -47,6 +48,16 @@ export class TournamentsController {
   @Roles(UserRole.ORGANIZER)
   update(@Param('id') id: string, @Body() dto: UpdateTournamentDto) {
     return this.tournamentsService.update(id, dto);
+  }
+
+  @Patch(':tournamentId/categories/:categoryId')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.ORGANIZER)
+  updateCategory(
+    @Param('categoryId') categoryId: string,
+    @Body() dto: UpdateCategoryDto,
+  ) {
+    return this.categoriesService.update(categoryId, dto);
   }
 
   @Delete(':id')
