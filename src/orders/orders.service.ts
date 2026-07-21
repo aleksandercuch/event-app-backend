@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -31,11 +32,33 @@ export class OrdersService {
       throw new NotFoundException('One or more categories not found');
     }
 
-    // TODO: replace with per-category pricing later
     const PRICE_PER_ENTRY = 25.0;
     const total = categories.length * PRICE_PER_ENTRY;
 
     return this.dataSource.transaction(async (manager) => {
+      // Lock each requested category row so no other transaction can read/write it
+      // until this one commits — this is what prevents overselling.
+      for (const category of categories) {
+        const locked = await manager.findOne(Category, {
+          where: { id: category.id },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (!locked) throw new NotFoundException('Category not found');
+
+        const currentCount = await manager.count(Entry, {
+          where: {
+            categoryId: category.id,
+            status: In([EntryStatus.PENDING, EntryStatus.CONFIRMED]),
+          },
+        });
+
+        if (currentCount >= locked.capacity) {
+          throw new ConflictException(
+            `Category ${locked.weapon}/${locked.ageGroup} is full`,
+          );
+        }
+      }
+
       const order = manager.create(Order, {
         userId,
         status: OrderStatus.PENDING,
