@@ -12,6 +12,7 @@ import { Category } from '../categories/category.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { In } from 'typeorm';
 import { EntryStatus } from '../entries/entry.entity';
+import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class OrdersService {
@@ -19,6 +20,7 @@ export class OrdersService {
     @InjectRepository(Order) private ordersRepo: Repository<Order>,
     @InjectRepository(Category) private categoriesRepo: Repository<Category>,
     private dataSource: DataSource,
+    private emailService: EmailService,
   ) {}
 
   async createFromCart(userId: string, dto: CreateOrderDto) {
@@ -61,12 +63,12 @@ export class OrdersService {
   }
 
   async markAsPaid(orderId: string, paymentIntentId: string) {
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       const order = await manager.findOne(Order, {
         where: { id: orderId },
-        relations: { items: { entry: true } },
+        relations: { items: { entry: true }, user: true },
       });
-      if (!order) return;
+      if (!order) return null;
 
       order.status = OrderStatus.PAID;
       order.stripePaymentIntentId = paymentIntentId;
@@ -76,7 +78,18 @@ export class OrdersService {
         item.entry.status = EntryStatus.CONFIRMED;
         await manager.save(item.entry);
       }
+
+      return order;
     });
+
+    if (result) {
+      await this.emailService.queueOrderConfirmation(
+        result.user.email,
+        result.user.firstName,
+        result.id,
+        result.total,
+      );
+    }
   }
 
   async findOne(id: string, userId: string) {

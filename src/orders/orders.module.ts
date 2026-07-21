@@ -7,11 +7,13 @@ import { Category } from '../categories/category.entity';
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 import { PaymentsModule } from '../payments/payments.module';
+import { EmailModule } from 'src/email/email.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Order, OrderItem, Entry, Category]),
     forwardRef(() => PaymentsModule),
+    EmailModule,
   ],
   providers: [OrdersService],
   controllers: [OrdersController],
